@@ -63,3 +63,28 @@ See the [official Skills documentation](https://code.claude.com/docs/en/skills) 
 ## License
 
 MIT
+
+### Memory System Skills: capture / lint / digest
+
+Three skills that maintain a personal **AI memory wiki** — a Google Drive folder of markdown files shared as the canonical memory across multiple AI agents (Claude Code, a phone assistant, etc.), following [Karpathy's LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw material is immutable, wiki pages are agent-maintained, a README in the folder is the schema.
+
+The folder structure these skills operate on:
+
+```
+ai_context/
+├── README.md          # schema: structure, workflows, conventions
+├── profile.md, current.md, preferences.md, ...   # topical wiki pages
+├── inbox/             # drop zone for raw material (anything, unsorted)
+├── sources/YYYY-MM/   # processed raw material, immutable archive
+├── compiled/          # generated bootstrap summaries for other agents
+├── log.md             # append-only change log (every edit, every agent)
+└── digests/           # periodic summaries
+```
+
+**`/capture`** — processes each new item in `inbox/`: reads it, surgically updates the affected wiki pages, archives the item to `sources/`, and appends to `log.md`. Treats material from other agents as lower-trust: contradictions are flagged to the human instead of overwriting.
+
+**`/lint`** — health-checks the whole folder: contradictions between pages, stale "upcoming" items, drifted duplicate facts, missing update stamps, Google Drive conflict copies, and (via a local git repo inside the folder) edits that bypassed the logging convention.
+
+**`/digest`** — summarizes a period's `log.md` entries into a digest page: life changes, decisions, open threads.
+
+Set up 2026-06-12 by Claude Code in a single session — the same session also bootstrapped the folder itself. To adapt: change the hardcoded folder path in each SKILL.md to your own memory folder.
