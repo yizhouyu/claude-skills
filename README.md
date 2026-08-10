@@ -1,74 +1,33 @@
 # Claude Skills
 
-Personal collection of Claude Skills for automating workflows.
+Ten skills I use daily with Claude Code, covering three workflows I got tired of doing by hand: a cross-agent memory system, YouTube publishing, and health-data analysis. Each is a folder with a `SKILL.md` that Claude loads when the task comes up.
 
-## What are Claude Skills?
-
-Claude Skills are folders containing instructions, scripts, and resources that Claude loads dynamically when relevant to a task. They work across Claude.ai, Claude Code, and the Claude API.
+| Skill | What it does |
+|---|---|
+| [`capture`](capture/SKILL.md) | Processes new items dropped in a memory inbox: updates the affected wiki pages, archives the raw item, logs the change |
+| [`lint`](lint/SKILL.md) | Health-checks that memory folder — contradictions between pages, stale claims, drifted duplicates, missing stamps, Drive conflict copies |
+| [`digest`](digest/SKILL.md) | Summarizes a period's change log into a digest page |
+| [`memory-gc`](memory-gc/SKILL.md) | Weekly garbage collection: expires stale claims, merges duplicates, promotes recurring log patterns into durable pages, recompiles the bootstrap file other agents read |
+| [`publish-video`](publish-video/SKILL.md) | Publishes a finished vlog end to end from chat — locate the export, generate bilingual SEO metadata, upload, optionally sync to Bilibili |
+| [`organize-trip-videos`](organize-trip-videos/SKILL.md) | Sorts a trip's footage by date into numbered CapCut project folders |
+| [`health`](health/SKILL.md) | Analyzes Oura data — weekly sentinel reports, weekday-strain and bedtime deep dives, anomaly interpretation |
+| [`deep-research-survey`](deep-research-survey/SKILL.md) | Multi-agent parallel investigation with cross-source verification, for topic surveys |
+| [`skill-writing-guide`](skill-writing-guide/SKILL.md) | Best practices for writing skill files — loaded whenever I write another one |
 
 ## Setup
 
-To use these skills with Claude Code:
-
-1. Clone this repository to your Desktop
-2. Run the setup script to create a symlink:
-   ```bash
-   ./setup-symlink.sh
-   ```
-3. Restart Claude Code to load the skills
-
-The script creates a symlink from `~/.claude/skills` to this repository, making all skills available to Claude Code.
-
-## Skills in this Repository
-
-### Organize Trip Videos for YouTube
-Automates the complete workflow for organizing trip videos into numbered YouTube project folders ready for editing in CapCut.
-
-**Usage**: "Organize my [trip name] videos for YouTube, starting at video [number]"
-
-**What it does**:
-1. Analyzes video files by modification date
-2. Shows distribution of videos per day
-3. Asks which dates to combine (for days with few videos)
-4. Creates sequentially numbered project folders (e.g., "70 - Iceland", "71 - Iceland")
-5. Copies CapCut project template structure to each folder
-6. Moves videos to the correct location (`01 - Unedited/mp4/`)
-7. Cleans up temporary files and verifies completion
-
-**Example**:
-```
-You: "Organize my Iceland trip videos for YouTube, starting at video 70"
-
-Claude analyzes dates, creates folders 70-77 based on 8 days of footage,
-and moves all videos into the proper CapCut project structure.
+```bash
+git clone https://github.com/yizhouyu/claude-skills.git ~/Desktop/claude-skills
+cd ~/Desktop/claude-skills && ./setup-symlink.sh
 ```
 
-**Why it's useful**: Turns a 30-minute manual process of creating folders, copying templates, and organizing hundreds of video files into a single command.
+The script symlinks `~/.claude/skills` to this repo, so every skill is available to Claude Code. Restart Claude Code to pick them up.
 
-## Adding New Skills
+Requires Claude Code with Skills support, on macOS, Linux, or WSL.
 
-Each skill is a folder containing a `SKILL.md` file with:
-- YAML frontmatter (name and description)
-- Instructions for Claude on how to perform the task
-- Technical implementation notes
-- Example usage
+## The memory skills, in more detail
 
-See the [official Skills documentation](https://code.claude.com/docs/en/skills) for more details.
-
-## Requirements
-
-- Claude Code (with Skills support)
-- macOS, Linux, or WSL on Windows
-
-## License
-
-MIT
-
-### Memory System Skills: capture / lint / digest
-
-Three skills that maintain a personal **AI memory wiki** — a Google Drive folder of markdown files shared as the canonical memory across multiple AI agents (Claude Code, a phone assistant, etc.), following [Karpathy's LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw material is immutable, wiki pages are agent-maintained, a README in the folder is the schema.
-
-The folder structure these skills operate on:
+`capture`, `lint`, `digest`, and `memory-gc` maintain a personal **AI memory wiki** — a Google Drive folder of markdown files that several AI agents (Claude Code, a phone assistant) share as their canonical memory, following [Karpathy's LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw material is immutable, wiki pages are agent-maintained, and a README in the folder is the schema.
 
 ```
 ai_context/
@@ -81,10 +40,20 @@ ai_context/
 └── digests/           # periodic summaries
 ```
 
-**`/capture`** — processes each new item in `inbox/`: reads it, surgically updates the affected wiki pages, archives the item to `sources/`, and appends to `log.md`. Treats material from other agents as lower-trust: contradictions are flagged to the human instead of overwriting.
+**`/capture`** reads each new inbox item, surgically updates the affected pages, archives the item to `sources/`, and appends to `log.md`. Material written by other agents is treated as lower-trust: contradictions get flagged to me rather than silently overwriting a page.
 
-**`/lint`** — health-checks the whole folder: contradictions between pages, stale "upcoming" items, drifted duplicate facts, missing update stamps, Google Drive conflict copies, and (via a local git repo inside the folder) edits that bypassed the logging convention.
+**`/lint`** finds what drifts — contradictions between pages, stale "upcoming" items, duplicate facts that diverged, missing update stamps, Google Drive conflict copies, and (via a git repo inside the folder) edits that bypassed the logging convention.
 
-**`/digest`** — summarizes a period's `log.md` entries into a digest page: life changes, decisions, open threads.
+**`/digest`** turns a period of log entries into a readable summary: changes, decisions, open threads.
 
-Set up 2026-06-12 by Claude Code in a single session — the same session also bootstrapped the folder itself. To adapt: change the hardcoded folder path in each SKILL.md to your own memory folder.
+**`/memory-gc`** runs unattended every Sunday via launchd and does the slower work: expiring claims that have aged out, merging duplicates `lint` only flagged, and promoting patterns that keep recurring in the log into their own durable page.
+
+To adapt any of these, change the hardcoded folder path in the relevant `SKILL.md`.
+
+## Adding a skill
+
+A skill is a folder with a `SKILL.md`: YAML frontmatter (name, description), instructions for Claude, implementation notes, and example usage. The `skill-writing-guide` skill in this repo is what I load before writing a new one. See the [official docs](https://code.claude.com/docs/en/skills) for the format.
+
+## License
+
+MIT
