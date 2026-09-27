@@ -42,7 +42,7 @@ Once confirmed:
 ### 5. Create YouTube project folders
 For each day's videos:
 - Create folder with naming pattern: `[N] - [Trip Name]` (e.g., "70 - Iceland", "71 - Iceland")
-- Copy template structure from: `/Users/yizhouyu/Desktop/YouTube Channel/[Capcut] new project template`
+- Copy template structure from: `~/Desktop/youtube-manager/templates/vlog-project (or run ~/Desktop/youtube-manager/scripts/new_project.sh "NN - Name")`
 - Template structure includes:
   - `01 - Unedited/mp4/` (for source videos)
   - `02 - Export/` (for rendered videos)
@@ -78,7 +78,7 @@ mkdir -p 1 2 3 4 5 ...
 ### YouTube project folder creation
 Copy template structure for each project:
 ```bash
-cp -r "/Users/yizhouyu/Desktop/YouTube Channel/[Capcut] new project template" "[N] - [Trip Name]"
+cp -r "~/Desktop/youtube-manager/templates/vlog-project (or run ~/Desktop/youtube-manager/scripts/new_project.sh "NN - Name")" "[N] - [Trip Name]"
 ```
 
 Template structure:
@@ -132,7 +132,7 @@ Always verify the organization after completion:
 ## Important Notes
 - **Sequential numbering**: Video numbers continue from user's last published video
 - **Date merging**: Combine days with few videos to create better paced content
-- **Template location**: `/Users/yizhouyu/Desktop/YouTube Channel/[Capcut] new project template`
+- **Template location**: `~/Desktop/youtube-manager/templates/vlog-project (or run ~/Desktop/youtube-manager/scripts/new_project.sh "NN - Name")`
 - **Folder location**: Create project folders on Desktop alongside template
 - **Cleanup**: Remove all temporary folders after organizing
 - **Verification**: Always count and verify files moved correctly
