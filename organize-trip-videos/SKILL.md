@@ -5,134 +5,51 @@ description: Organizes trip video files by date into numbered YouTube project fo
 
 # Organize Trip Videos for YouTube
 
-This skill helps organize video files from trips into numbered YouTube project folders based on their modification dates, with each folder following a template structure ready for video editing.
+Split a trip's raw GoPro footage into numbered vlog project folders — one folder = one future video — each built from the youtube-manager template, with the raw clips in `01 - Unedited/`. No editing, just sorting.
 
 ## Workflow
 
-When the user asks to organize trip videos or sort files by date, follow these steps:
+### 1. Infer what you can before asking
+- **Source folder**: usually `~/Desktop/YYYYMM <Trip>`.
+- **Next video number**: `ls ~/Desktop | grep -E '^[0-9]+ - '` and take max + 1. The user may name the last video they *edited* while a later unedited `NN - …` folder already exists — existing folders win; start after the highest one.
+- **Itinerary**: the user may link trip-planning pages (e.g. Notion). Read them via Claude in Chrome (`get_page_text`). Day details are often in **collapsed toggles** (expand them before reading) or in a **linked Google Doc** (read it with the Google Drive connector `read_file_content`). The itinerary is what gives each folder its place name.
+- **Destination**: follow the user. Either on the Desktop or *inside* the source folder — ask if unclear.
 
-### 1. Gather information
-Ask the user for:
-- **Source folder**: Path to folder containing the videos (e.g., "202401 Iceland")
-- **Starting video number**: Sequential YouTube video number to start from (e.g., 70, 78)
-- **Trip name**: Name for the folders (e.g., "Iceland")
-
-### 2. Analyze the folder
-- List all video files in the source directory
-- Extract modification dates from the files
-- Generate a date distribution summary showing:
-  - Unique dates found
-  - Number of files for each date
-  - Date ranges
-- Present the analysis to the user
-
-### 3. Ask for date merging preferences
-- Show the distribution of videos per date
-- Ask if any dates should be combined into the same folder (e.g., days with few videos)
-- Confirm the final number of folders to create
-- Show proposed folder names: `[N] - [Trip Name]`, `[N+1] - [Trip Name]`, etc.
-
-### 4. Sort videos into temporary folders
-Once confirmed:
-- Create temporary numbered folders (1, 2, 3, etc.) within the source directory
-- Move files into the appropriate numbered folders based on their dates
-- Use `find` command with `-newermt` for reliable date-based file selection
-- Handle edge cases (special characters in filenames, etc.)
-
-### 5. Create YouTube project folders
-For each day's videos:
-- Create folder with naming pattern: `[N] - [Trip Name]` (e.g., "70 - Iceland", "71 - Iceland")
-- Copy template structure from: `~/Desktop/youtube-manager/templates/vlog-project (or run ~/Desktop/youtube-manager/scripts/new_project.sh "NN - Name")`
-- Template structure includes:
-  - `01 - Unedited/mp4/` (for source videos)
-  - `02 - Export/` (for rendered videos)
-
-### 6. Move videos to final locations
-- Move videos from temporary folders to `[N] - [Trip Name]/01 - Unedited/mp4/`
-- Verify each move completes successfully
-
-### 7. Cleanup and verify
-- Remove empty temporary numbered folders from source directory
-- Count files in each project folder's mp4 directory
-- Report the final organization with folder names and file counts
-
-## Technical Implementation Notes
-
-### Date analysis
-Parse modification dates using `ls -l` output:
+### 2. Get real shoot times from metadata, not mtime
+File mtime drifts (copy time, timezone display). Use the GoPro `creation_time` tag plus duration:
 ```bash
-ls -l | awk '{print $6, $7}' | sort | uniq -c
+for f in *.MP4; do echo -e "$f\t$(ffprobe -v error -show_entries format_tags=creation_time:format=duration -of default=nw=1:nk=0 "$f" | tr '\n' ' ')"; done > meta.tsv
 ```
+- GoPro writes the **camera's wall clock** labelled `Z` — it is not UTC. The camera often stays on home time while traveling.
+- Calibrate: match the first/last clip of a day against the itinerary (e.g. camera shows 19:30 for a stop planned at 5:30pm local ⇒ camera is local + 2h). Then check whether any shooting session crosses local midnight.
+- **The camera clock can be wrong.** If the GoPro wasn't initialized (not paired / battery died), it falls back to a default GoPro date (e.g. years off, or dates outside the trip). mtime comes from the same camera clock, so it doesn't help. Always sanity-check before trusting times:
+  - every `creation_time` falls within the trip's date range;
+  - sorted by file number (`GXccnnnn`: sort by `nnnn`, then chapter `cc`), times never go backwards — a backward jump marks a clock reset.
+  - If either check fails for some clips, trust **file-number order** instead: those clips sit between their good-timestamp neighbours. Place them by sequence, and use gaps in their own (internally consistent) timestamps to find day breaks. Confirm with frame grabs (`ffmpeg -ss 1 -frames:v 1`) against the itinerary (landmarks, day/night). Tell the user which clips were placed this way.
+- Group clips into sessions by gaps > 3h and print per-session start/end, clip count, total minutes, first/last filename. This is the distribution to reason over.
 
-### Temporary folder organization
-Use the `find` command for reliable date-based file selection:
+### 3. Decide the grouping
+- Default: one local day = one video, named after that day's main highlight from the itinerary (e.g. `12 - Glacier Hike`, `13 - Old Town`), not a generic `NN - Trip`.
+- Merge tiny days (≲10 clips / ≲3 min raw) into the adjacent day at the same location — e.g. an arrival evening into the next day, a travel day into the following day.
+- Clips shot after local midnight belong to the previous day.
+- Sorting is reversible, so decide and report rather than asking — list the mapping (dates → folder, clip count, raw minutes) in the final report so they can ask for merges.
+
+### 4. Create folders and move
+Create each project with the template script (never hand-roll the structure):
 ```bash
-find . -maxdepth 1 -name "*.MP4" -newermt "YYYY-MM-DD" ! -newermt "YYYY-MM-DD" -exec mv {} folder/ \;
+~/Desktop/youtube-manager/scripts/new_project.sh "NN - Place" "<parent dir>"
 ```
-
-Create all temporary numbered folders upfront:
-```bash
-mkdir -p 1 2 3 4 5 ...
+Result:
 ```
-
-### YouTube project folder creation
-Copy template structure for each project:
-```bash
-cp -r "~/Desktop/youtube-manager/templates/vlog-project (or run ~/Desktop/youtube-manager/scripts/new_project.sh "NN - Name")" "[N] - [Trip Name]"
+NN - Place/
+├── 01 - Unedited/        ← raw clips go directly here (no mp4/ subfolder)
+└── 02 - Export/
+    ├── thumbnail/
+    └── edit/ (README.md, glossary.json, asr_context.txt, music/, sfx/, scripts/)
 ```
+Do the move in one Python script driven by `meta.tsv` and an explicit `{date: folder}` map — no temp numbered folders, no `find -newermt` (mtime-based and timezone-fragile).
 
-Template structure:
-```
-[N] - [Trip Name]/
-├── 01 - Unedited/
-│   └── mp4/           (destination for videos)
-└── 02 - Export/       (for rendered videos)
-```
-
-### Moving videos to final location
-Move from temporary to project folders:
-```bash
-mv "source/1/"* "[N] - [Trip Name]/01 - Unedited/mp4/"
-```
-
-### Cleanup
-Remove empty temporary folders:
-```bash
-rmdir source/1 source/2 source/3 ...
-```
-
-### Verification
-Always verify the organization after completion:
-- Count files in each project folder: `ls "[N] - Trip/01 - Unedited/mp4/" | wc -l`
-- Verify temporary folders are removed
-- Confirm all videos have been moved
-
-## Example Usage
-
-**User**: "Organize my Iceland trip videos for YouTube, starting at video 70"
-
-**Response**:
-1. Ask for source folder path (e.g., "202401 Iceland") and trip name (e.g., "Iceland")
-2. Analyze the folder: "Found 364 videos from Jan 3 to Jan 11"
-3. Show distribution:
-   - Jan 3-4: 96 videos
-   - Jan 5: 48 videos
-   - Jan 6: 76 videos
-   - Jan 7: 13 videos
-   - Jan 8: 25 videos
-   - Jan 9: 22 videos
-   - Jan 10: 51 videos
-   - Jan 11: 33 videos
-4. Ask: "Want to combine Jan 3-4? Any other dates to merge?"
-5. Create folders: "70 - Iceland" through "77 - Iceland"
-6. Copy template structure to each folder
-7. Move videos to respective `01 - Unedited/mp4/` folders
-8. Report completion: "Created 8 YouTube project folders (70-77) with 364 videos organized"
-
-## Important Notes
-- **Sequential numbering**: Video numbers continue from user's last published video
-- **Date merging**: Combine days with few videos to create better paced content
-- **Template location**: `~/Desktop/youtube-manager/templates/vlog-project (or run ~/Desktop/youtube-manager/scripts/new_project.sh "NN - Name")`
-- **Folder location**: Create project folders on Desktop alongside template
-- **Cleanup**: Remove all temporary folders after organizing
-- **Verification**: Always count and verify files moved correctly
+### 5. Verify
+- Per folder: clips in `01 - Unedited/` equal the planned count; totals equal the source count.
+- No `.MP4` left loose in the source folder.
+- Report: folder name, dates covered, clip count, raw minutes.
