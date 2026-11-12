@@ -1,6 +1,6 @@
 # Claude Skills
 
-Ten skills I use daily with Claude Code, covering three workflows I got tired of doing by hand: a cross-agent memory system, YouTube publishing, and health-data analysis. Each is a folder with a `SKILL.md` that Claude loads when the task comes up.
+Eleven skills I use daily with Claude Code, covering three workflows I got tired of doing by hand: a cross-agent memory system, YouTube publishing, and health-data analysis. Each is a folder with a `SKILL.md` that Claude loads when the task comes up.
 
 | Skill | What it does |
 |---|---|
@@ -10,6 +10,7 @@ Ten skills I use daily with Claude Code, covering three workflows I got tired of
 | [`memory-gc`](memory-gc/SKILL.md) | Weekly garbage collection: expires stale claims, merges duplicates, promotes recurring log patterns into durable pages, recompiles the bootstrap file other agents read |
 | [`publish-video`](publish-video/SKILL.md) | Publishes a finished vlog end to end from chat — locate the export, generate bilingual SEO metadata, upload, optionally sync to Bilibili |
 | [`organize-trip-videos`](organize-trip-videos/SKILL.md) | Sorts a trip's footage by date into numbered CapCut project folders |
+| [`credit-karma`](credit-karma/SKILL.md) | Bulk-fixes mis-categorized Credit Karma transactions through CK's own web API (in a logged-in browser), then answers spending questions; personal rules live in the memory folder, not here |
 | [`health`](health/SKILL.md) | Analyzes Oura data — weekly sentinel reports, weekday-strain and bedtime deep dives, anomaly interpretation |
 | [`deep-research-survey`](deep-research-survey/SKILL.md) | Multi-agent parallel investigation with cross-source verification, for topic surveys |
 | [`skill-writing-guide`](skill-writing-guide/SKILL.md) | Best practices for writing skill files — loaded whenever I write another one |
